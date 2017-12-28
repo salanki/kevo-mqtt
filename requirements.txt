@@ -1,0 +1,2 @@
+pykevoplus
+paho-mqtt
