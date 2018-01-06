@@ -53,4 +53,4 @@ Simply use the `MQTT Binding <http://docs.openhab.org/addons/bindings/mqtt1/read
 
 .. code:: TEXT
 
-  Switch DoorLock { mqtt=">[mybroker:home/kevo:command:ON:LOCK a95a788a-e774-4561-8fc8-2225b3dccc21],>[mybroker:home/kevo:command:OFF:UNLOCK a95a788a-e774-4561-8fc8-2225b3dccc21],<[mybroker:home/kevo:command:state:JS(kevostate.js)" }
+  Switch DoorLock { mqtt=">[mybroker:home/kevo:command:ON:LOCK a95a788a-e774-4561-8fc8-2225b3dccc21],>[mybroker:home/kevo:command:OFF:UNLOCK a95a788a-e774-4561-8fc8-2225b3dccc21],<[mybroker:home/kevo:state:JS(kevostate.js)" }
