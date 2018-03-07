@@ -25,7 +25,7 @@ The Lock status will be polled at a user-defined interval and published to the t
   {
     "lock_id": "a95a788a-e774-4561-8fc8-2225b3dccc21",
     "type": "lockState",
-    "state": "locked"
+    "state": "Locked"
   }
 
 A Kevo Plus bridge is required. You can get the lock IDs manually by logging into mykevo.com, click Details for the lock, click Settings, the lock ID is on the right.
@@ -37,7 +37,7 @@ Run as Docker container
 
 .. code:: bash
 
-  docker run --name kevoplus -d --restart=always -e KEVO_USERNAME=my@account.com -e KEVO_PASSWORD=password -e KEVO_REFRESH_INTERVAL=500 -e KEVO_LOCK_ID=a95a788a-e774-4561-8fc8-2225b3dccc21 -e MQTT_TOPIC=home/kevo -e MQTT_BROKER=localhost kevo-mqtt:latest
+  docker run --name kevoplus -d --restart=always -e KEVO_USERNAME=my@account.com -e KEVO_PASSWORD=password -e KEVO_REFRESH_INTERVAL=180 -e KEVO_LOCK_ID=a95a788a-e774-4561-8fc8-2225b3dccc21 -e MQTT_TOPIC=home/kevo -e MQTT_BROKER=localhost kevo-mqtt:latest
 
 Usage with OpenHAB
 -----------
@@ -47,10 +47,14 @@ Simply use the `MQTT Binding <http://docs.openhab.org/addons/bindings/mqtt1/read
 .. code:: JAVASCRIPT
 
   (function(i) {
-    var json  = JSON.parse(i);
-    retun json.state == 'locked' ? 'ON' : 'OFF';
+    var json = JSON.parse(i);
+    if (json.type == 'Locked') {
+      return 'ON';
+    } else {
+      return 'OFF';
+    }
   })(input)
 
 .. code:: TEXT
 
-  Switch DoorLock { mqtt=">[mybroker:home/kevo:command:ON:LOCK a95a788a-e774-4561-8fc8-2225b3dccc21],>[mybroker:home/kevo:command:OFF:UNLOCK a95a788a-e774-4561-8fc8-2225b3dccc21],<[mybroker:home/kevo:state:JS(kevostate.js)" }
+  Switch DoorLock { mqtt=">[mybroker:home/kevo:command:ON:LOCK a95a788a-e774-4561-8fc8-2225b3dccc21],>[mybroker:home/kevo:command:OFF:UNLOCK a95a788a-e774-4561-8fc8-2225b3dccc21],<[mybroker:home/kevo:state:JS(kevostate.js):.*lockState.*" }

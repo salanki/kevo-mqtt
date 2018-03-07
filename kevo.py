@@ -4,6 +4,8 @@ import time
 from threading import Thread
 from pykevoplus import KevoLock
 import paho.mqtt.client as mqtt
+import sys
+import signal
 
 locks = {}
 
@@ -22,26 +24,33 @@ def on_connect(client, userdata, flags, rc):
     client.subscribe(os.environ['MQTT_TOPIC'])
 
 def on_message(client, userdata, msg):
-    splits = msg.payload.split(' ')
-    command = splits[0].lower()
+    try:
+        splits = msg.payload.split(' ')
+        command = splits[0].lower()
 
-    if command == 'unlock':
-        data = { 'type': 'unlock', 'lock_id': splits[1] }
-    elif command == 'lock':
-        data = { 'type': 'lock', 'lock_id': splits[1] }
-    else:
-        data = json.loads(msg.payload)
+        if command == 'unlock':
+            data = { 'type': 'unlock', 'lock_id': splits[1] }
+        elif command == 'lock':
+            data = { 'type': 'lock', 'lock_id': splits[1] }
+        else:
+            data = json.loads(msg.payload)
 
-    lock = get_lock(data['lock_id'])
+        lock = get_lock(data['lock_id'])
 
-    if data['type'].lower() == 'unlock':
-        print "Unlocking: %s" % (data['lock_id'])
-        lock.Unlock()
-    elif data['type'].lower() == 'lock':
-        print "Locking: %s" % (data['lock_id'])
-        lock.Lock()
+        if data['type'].lower() == 'unlock':
+            print "Unlocking: %s" % (data['lock_id'])
+            lock.Unlock()
+            publish_state(client, data['lock_id'], lock.state)
+        elif data['type'].lower() == 'lock':
+            print "Locking: %s" % (data['lock_id'])
+            lock.Lock()
+            publish_state(client, data['lock_id'], lock.state)
+        elif data['type'].lower() == 'refresh':
+            refresh(client, data['lock_id'])
 
-    publish_state(client, data['lock_id'], lock.state)
+    except Exception, e:
+            print >> sys.stderr, "Exception: %s" % str(e)
+            os.kill(os.getpid(), signal.SIGKILL)
 
 def publish_state(client, lock_id, state):
     data = { "type": "lockState", "lock_id": lock_id, "state": state }
@@ -54,11 +63,15 @@ def refresh(client, lock_id):
     state = get_lock(lock_id).GetBoltState()
     publish_state(client, lock_id, state)
 
-
 def refresh_loop(client):
     while True:
-        refresh(client, os.environ['KEVO_LOCK_ID'])
-        time.sleep(os.environ['KEVO_REFRESH_INTERVAL'])
+        try:
+            refresh(client, os.environ['KEVO_LOCK_ID'])
+        except Exception, e:
+            print >> sys.stderr, "Exception: %s" % str(e)
+            os.kill(os.getpid(), signal.SIGKILL)
+
+        time.sleep(int(os.environ['KEVO_REFRESH_INTERVAL']))
 
 if os.environ.get('MQTT_PORT', None) is None:
     port = 1883
