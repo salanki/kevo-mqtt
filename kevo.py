@@ -82,6 +82,11 @@ client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
 
+user = os.environ.get('MQTT_USERNAME', None)
+if user is not None:
+    password = os.environ.get('MQTT_PASSWORD', None)
+    client.username_pw_set(user, password)
+    
 client.connect(os.environ['MQTT_BROKER'], port, 60)
 
 t = Thread(target=refresh_loop, args=(client,))
