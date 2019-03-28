@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 import json
 import time
@@ -8,6 +10,7 @@ import sys
 import signal
 
 locks = {}
+quiet = False
 
 def get_lock(lock_id):
     if locks.get(lock_id, None) is None:
@@ -19,7 +22,7 @@ def get_lock(lock_id):
         return locks[lock_id]
 
 def on_connect(client, userdata, flags, rc):
-    print("Connected to MQTT with result code "+str(rc))
+    if not quiet: print("Connected to MQTT with result code "+str(rc))
 
     client.subscribe(os.environ['MQTT_TOPIC'])
 
@@ -38,11 +41,11 @@ def on_message(client, userdata, msg):
         lock = get_lock(data['lock_id'])
 
         if data['type'].lower() == 'unlock':
-            print "Unlocking: %s" % (data['lock_id'])
+            if not quiet: print "Unlocking: %s" % (data['lock_id'])
             lock.Unlock()
             publish_state(client, data['lock_id'], lock.state)
         elif data['type'].lower() == 'lock':
-            print "Locking: %s" % (data['lock_id'])
+            if not quiet: print "Locking: %s" % (data['lock_id'])
             lock.Lock()
             publish_state(client, data['lock_id'], lock.state)
         elif data['type'].lower() == 'refresh':
@@ -56,7 +59,7 @@ def publish_state(client, lock_id, state):
     data = { "type": "lockState", "lock_id": lock_id, "state": state }
     msg = json.dumps(data)
 
-    print msg
+    if not quiet: print msg
     client.publish(os.environ['MQTT_TOPIC'], msg)
 
 def refresh(client, lock_id):
@@ -66,7 +69,10 @@ def refresh(client, lock_id):
 def refresh_loop(client):
     while True:
         try:
-            refresh(client, os.environ['KEVO_LOCK_ID'])
+            lockstring = os.environ.get('KEVO_LOCK_ID', '')
+            lockids = lockstring.split(':')
+            for lockid in lockids:
+                refresh(client, lockid)
         except Exception, e:
             print >> sys.stderr, "Exception: %s" % str(e)
             os.kill(os.getpid(), signal.SIGKILL)
